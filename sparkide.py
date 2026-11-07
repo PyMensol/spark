@@ -171,6 +171,12 @@ def mk_icon(kind):
             p.drawLine(i, 13, i, 16)
             p.drawLine(0, i, 3, i)
             p.drawLine(13, i, 16, i)
+    elif kind == "bolt":
+        p.setPen(Qt.NoPen)
+        p.setBrush(QColor("#e8b53e"))
+        p.drawPolygon(QPolygon([
+            QPoint(9, 1), QPoint(3, 9), QPoint(7, 9),
+            QPoint(6, 15), QPoint(13, 6), QPoint(8, 6)]))
     p.end()
     return QIcon(px)
 
@@ -179,6 +185,7 @@ class Win(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("spark")
+        self.setWindowIcon(mk_icon("bolt"))
         self.resize(1240, 780)
         self.path = None
         self.last_err = False
