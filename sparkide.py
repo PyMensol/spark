@@ -1,10 +1,3 @@
-"""sparkide - a c4d-flavored editor for the spark language.
-
-panels: scripts (left), editor (center viewport), bytecode + functions
-(right attributes), console (bottom). the bytecode updates live while
-you type, like a material preview.
-"""
-
 import sys
 import time
 from pathlib import Path

@@ -1,15 +1,3 @@
-"""spark - a tiny language that compiles to bytecode and runs on a stack vm.
-
-run a file:   py -3.14 spark.py hello.sp
-disassemble:  py -3.14 spark.py --dis hello.sp
-repl:         py -3.14 spark.py
-ide:          py -3.14 spark.py --ide
-
-the language: let, if/else, while, fn, return, print, arrays,
-numbers, strings, booleans. compiler turns it into ~30 ops that a
-little stack machine executes.
-"""
-
 import sys
 
 KW = {"let", "if", "else", "while", "fn", "return", "true", "false",
