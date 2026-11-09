@@ -103,8 +103,8 @@ class Editor(QPlainTextEdit):
             "selection-background-color:#5a6b7d; }" % C4D_EDIT)
 
     def line_width(self):
-        return 8 + self.fontMetrics().horizontalAdvance(
-            str(max(1, self.blockCount()))) + 8
+        return 6 + self.fontMetrics().horizontalAdvance(
+            str(max(1, self.blockCount()))) + 6
 
     def _resize_gut(self):
         r = self.contentsRect()
@@ -164,21 +164,129 @@ def mk_icon(kind):
             p.drawLine(i, 13, i, 16)
             p.drawLine(0, i, 3, i)
             p.drawLine(13, i, 16, i)
-    elif kind == "bolt":
-        p.setPen(Qt.NoPen)
-        p.setBrush(QColor("#e8b53e"))
-        p.drawPolygon(QPolygon([
-            QPoint(9, 1), QPoint(3, 9), QPoint(7, 9),
-            QPoint(6, 15), QPoint(13, 6), QPoint(8, 6)]))
     p.end()
     return QIcon(px)
+
+
+def app_icon():
+    from PySide6.QtGui import QLinearGradient, QPen
+    px = QPixmap(64, 64)
+    px.fill(Qt.transparent)
+    p = QPainter(px)
+    p.setRenderHint(QPainter.Antialiasing)
+    bolt = [QPoint(38, 4), QPoint(12, 36), QPoint(27, 36),
+            QPoint(22, 60), QPoint(50, 24), QPoint(33, 24)]
+    p.setPen(Qt.NoPen)
+    p.setBrush(QColor(0, 0, 0, 90))
+    p.drawPolygon(QPolygon([QPoint(q.x() + 3, q.y() + 3) for q in bolt]))
+    grad = QLinearGradient(0, 0, 0, 64)
+    grad.setColorAt(0.0, QColor("#ffe27a"))
+    grad.setColorAt(0.55, QColor("#f5b73c"))
+    grad.setColorAt(1.0, QColor("#c47b15"))
+    p.setBrush(grad)
+    p.setPen(QPen(QColor("#8a5a10"), 2))
+    p.drawPolygon(QPolygon(bolt))
+    p.setPen(QPen(QColor(255, 255, 255, 150), 2))
+    p.drawLine(QPoint(33, 11), QPoint(21, 28))
+    p.end()
+    return QIcon(px)
+
+
+class FileTree(QTreeWidget):
+    def __init__(self, win):
+        super().__init__()
+        self.win = win
+        self.setDragEnabled(True)
+        self.setAcceptDrops(True)
+        self.setDropIndicatorShown(True)
+        self.setDragDropMode(QTreeWidget.DragDrop)
+        self.setDefaultDropAction(Qt.MoveAction)
+        self.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.customContextMenuRequested.connect(self._menu)
+
+    def _menu(self, pos):
+        from PySide6.QtWidgets import QMenu, QInputDialog
+        it = self.itemAt(pos)
+        menu = QMenu(self)
+        menu.addAction("new file", lambda: self._mk(False, it))
+        menu.addAction("new folder", lambda: self._mk(True, it))
+        if it and isinstance(it.data(0, Qt.UserRole), str):
+            menu.addSeparator()
+            menu.addAction("rename", lambda: self._rename(it))
+            menu.addAction("delete", lambda: self._del(it))
+        menu.addSeparator()
+        menu.addAction("refresh", lambda: self.win._fill_files())
+        menu.exec(self.viewport().mapToGlobal(pos))
+
+    def _target_dir(self, it):
+        if it is None:
+            return SRC_DIR
+        p = it.data(0, Qt.UserRole)
+        if isinstance(p, str):
+            p = Path(p)
+            return p if p.is_dir() else p.parent
+        return SRC_DIR
+
+    def _mk(self, folder, it):
+        from PySide6.QtWidgets import QInputDialog
+        name, ok = QInputDialog.getText(
+            self, "new " + ("folder" if folder else "file"), "name:")
+        if not ok or not name.strip():
+            return
+        name = name.strip()
+        if not folder and "." not in name:
+            name += ".sp"
+        d = self._target_dir(it)
+        p = d / name
+        if folder:
+            p.mkdir(exist_ok=True)
+        else:
+            p.write_text("", encoding="utf-8")
+        self.win._fill_files()
+        if not folder:
+            self.win.ed.setPlainText("")
+            self.win.path = str(p)
+
+    def _rename(self, it):
+        from PySide6.QtWidgets import QInputDialog
+        p = Path(it.data(0, Qt.UserRole))
+        name, ok = QInputDialog.getText(self, "rename", "new name:",
+                                        text=p.name)
+        if ok and name.strip():
+            p.rename(p.parent / name.strip())
+            self.win._fill_files()
+
+    def _del(self, it):
+        import shutil
+        p = Path(it.data(0, Qt.UserRole))
+        if p.is_dir():
+            shutil.rmtree(p)
+        elif p.is_file():
+            p.unlink()
+        self.win._fill_files()
+
+    def dropEvent(self, e):
+        src = self.currentItem()
+        dst = self.itemAt(int(e.position().x()), int(e.position().y()))
+        e.ignore()
+        if not src or src is dst:
+            return
+        sp = src.data(0, Qt.UserRole)
+        if not isinstance(sp, str):
+            return
+        d = self._target_dir(dst)
+        try:
+            Path(sp).rename(d / Path(sp).name)
+        except Exception as ex:
+            self.win.statusBar().showMessage("move failed: %s" % ex, 4000)
+        self.win._fill_files()
 
 
 class Win(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("spark")
-        self.setWindowIcon(mk_icon("bolt"))
+        self.setWindowIcon(app_icon())
         self.resize(1240, 780)
         self.path = None
         self.last_err = False
@@ -217,7 +325,7 @@ class Win(QMainWindow):
         fdock.setWidget(self.flist)
         self.addDockWidget(Qt.RightDockWidgetArea, fdock)
 
-        self.files = QTreeWidget()
+        self.files = FileTree(self)
         self.files.setHeaderHidden(True)
         self.files.itemDoubleClicked.connect(self._file_open)
         sdock = QDockWidget("Scripts", self)
@@ -264,12 +372,19 @@ class Win(QMainWindow):
     def _fill_files(self):
         SRC_DIR.mkdir(exist_ok=True)
         self.files.clear()
-        for p in sorted(SRC_DIR.rglob("*")):
-            if p.is_file() and p.suffix in (".sp", ".txt"):
-                it = QTreeWidgetItem([p.name])
+        st = self.style()
+        def walk(parent, d):
+            for p in sorted(d.iterdir()):
+                it = QTreeWidgetItem(parent, [p.name])
                 it.setData(0, Qt.UserRole, str(p))
-                it.setIcon(0, self.style().standardIcon(QStyle.SP_FileIcon))
-                self.files.addTopLevelItem(it)
+                if p.is_dir():
+                    it.setIcon(0, st.standardIcon(QStyle.SP_DirIcon))
+                    walk(it, p)
+                elif p.suffix in (".sp", ".txt"):
+                    it.setIcon(0, st.standardIcon(QStyle.SP_FileIcon))
+                else:
+                    it.setIcon(0, st.standardIcon(QStyle.SP_FileIcon))
+        walk(self.files, SRC_DIR)
 
     def _file_open(self, item, col):
         p = item.data(0, Qt.UserRole)
