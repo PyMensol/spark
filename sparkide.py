@@ -100,7 +100,7 @@ class Editor(QPlainTextEdit):
         self.updateRequest.connect(self._gut_update)
         self.setStyleSheet(
             "QPlainTextEdit { background:%s; color:#d8d8d8; border:0; "
-            "selection-background-color:#5a6b7d; }" % C4D_EDIT)
+            "selection-background-color:#6e5c40; }" % C4D_EDIT)
 
     def line_width(self):
         return 6 + self.fontMetrics().horizontalAdvance(
@@ -484,16 +484,16 @@ def launch():
         QToolBar { background: %s; border: 0; spacing: 4px; padding: 3px; }
         QToolButton { color: %s; background: transparent; padding: 4px 8px;
             border-radius: 3px; }
-        QToolButton:hover { background: #5a5a5a; }
+        QToolButton:hover { background: #565656; }
         QToolButton:pressed { background: %s; }
         QDockWidget { color: %s; font-weight: bold; }
         QDockWidget::title { background: %s; padding: 5px;
-            border-bottom: 1px solid #333; }
+            border-bottom: 1px solid #3c3c3c; }
         QTreeWidget, QTextEdit { background: %s; color: %s; border: 0; }
         QTreeWidget::item:selected { background: %s; }
-        QTreeWidget::item:hover { background: #555555; }
+        QTreeWidget::item:hover { background: #4e4a40; }
         QStatusBar { background: %s; color: %s; }
-        QSplitter::handle { background: #333; }
+        QSplitter::handle { background: #3c3c3c; }
     """ % (C4D_BG, C4D_DARK, C4D_TXT, "#5a5a5a", C4D_DARK, C4D_TXT,
            C4D_ACC, C4D_DARK, C4D_TXT, C4D_ACC, C4D_TXT, C4D_DARK,
            C4D_EDIT, C4D_TXT, C4D_ACC, C4D_DARK, C4D_TXT))
